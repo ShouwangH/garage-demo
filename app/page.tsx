@@ -1,4 +1,17 @@
+"use client";
+
+import { useState } from "react";
+import { useListings } from "@/hooks/useListings";
+import { ListingGrid } from "@/components/ListingGrid";
+import { sortListings } from "@/lib/matching";
+import type { SortOption } from "@/lib/types";
+
 export default function BrowsePage() {
+  const { listings, isLoading } = useListings();
+  const [sortBy, setSortBy] = useState<SortOption>("recent");
+
+  const sortedListings = sortListings(listings, sortBy);
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
       <div className="flex gap-6 lg:gap-8">
@@ -23,7 +36,9 @@ export default function BrowsePage() {
                 Browse Listings
               </h1>
               <p className="text-sm text-gray-500 mt-1">
-                18 listings available
+                {isLoading
+                  ? "Loading..."
+                  : `${listings.length} listings available`}
               </p>
             </div>
 
@@ -46,34 +61,22 @@ export default function BrowsePage() {
                 Filters
               </button>
 
-              {/* Sort dropdown placeholder */}
-              <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
-                <option>Most Recent</option>
-                <option>Price: Low to High</option>
-                <option>Price: High to Low</option>
+              {/* Sort dropdown */}
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortOption)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="recent">Most Recent</option>
+                <option value="price_asc">Price: Low to High</option>
+                <option value="price_desc">Price: High to Low</option>
+                <option value="relevance">Relevance</option>
               </select>
             </div>
           </div>
 
-          {/* Listings grid placeholder */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
-            {/* Placeholder cards */}
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div
-                key={i}
-                className="bg-white rounded-lg border border-gray-200 overflow-hidden"
-              >
-                <div className="aspect-[4/3] bg-gray-100 flex items-center justify-center">
-                  <span className="text-gray-400 text-sm">Listing {i}</span>
-                </div>
-                <div className="p-4">
-                  <div className="h-4 bg-gray-100 rounded w-3/4 mb-2" />
-                  <div className="h-6 bg-gray-100 rounded w-1/2 mb-3" />
-                  <div className="h-3 bg-gray-100 rounded w-full" />
-                </div>
-              </div>
-            ))}
-          </div>
+          {/* Listings grid */}
+          <ListingGrid listings={sortedListings} isLoading={isLoading} />
         </div>
       </div>
     </div>
