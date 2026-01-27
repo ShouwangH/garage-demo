@@ -3,6 +3,14 @@
 import { cn } from "@/lib/utils";
 import { useEffect, useCallback, ReactNode } from "react";
 
+// Global state for managing stacked modals
+declare global {
+  interface Window {
+    __modalOpenCount?: number;
+    __previousBodyOverflow?: string;
+  }
+}
+
 export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -30,16 +38,32 @@ export function Modal({
     [onClose]
   );
 
-  // Lock body scroll when modal is open
+  // Lock body scroll when modal is open (handles stacked modals)
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-      document.addEventListener("keydown", handleEscape);
+    if (!isOpen) return;
+
+    // Initialize global counter if needed
+    if (typeof window.__modalOpenCount === "undefined") {
+      window.__modalOpenCount = 0;
     }
 
+    // First modal opening - save current overflow and lock
+    if (window.__modalOpenCount === 0) {
+      window.__previousBodyOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+    }
+
+    window.__modalOpenCount++;
+    document.addEventListener("keydown", handleEscape);
+
     return () => {
-      document.body.style.overflow = "unset";
+      window.__modalOpenCount!--;
       document.removeEventListener("keydown", handleEscape);
+
+      // Last modal closing - restore previous overflow
+      if (window.__modalOpenCount === 0) {
+        document.body.style.overflow = window.__previousBodyOverflow || "";
+      }
     };
   }, [isOpen, handleEscape]);
 
