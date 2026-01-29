@@ -1,23 +1,45 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useCallback, Suspense } from "react";
 import { useListings } from "@/hooks/useListings";
 import { useFilters } from "@/hooks/useFilters";
+import { useSavedSearches } from "@/hooks/useSavedSearches";
+import { useToast } from "@/hooks/useToast";
 import { ListingGrid } from "@/components/ListingGrid";
 import { FilterSidebar } from "@/components/FilterSidebar";
 import { FilterDrawer } from "@/components/FilterDrawer";
+import { SaveSearchModal } from "@/components/SaveSearchModal";
 import { getMatchingListings, sortListings } from "@/lib/matching";
-import type { SortOption } from "@/lib/types";
+import type { SortOption, SavedSearchInput } from "@/lib/types";
 
 function BrowseContent() {
   const { listings, isLoading } = useListings();
   const { filters, hasActiveFilters, activeFilterCount } = useFilters();
+  const { createSavedSearch, findSimilarSearch } = useSavedSearches(listings);
+  const { addToast } = useToast();
   const [sortBy, setSortBy] = useState<SortOption>("recent");
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
 
   // Apply filters then sort
   const filteredListings = getMatchingListings(listings, filters);
   const sortedListings = sortListings(filteredListings, sortBy);
+
+  // Handle saving a search
+  const handleSaveSearch = useCallback(
+    (input: SavedSearchInput) => {
+      // Check for duplicate filters
+      const existing = findSimilarSearch(input.filters);
+      if (existing) {
+        addToast(`A similar search "${existing.name}" already exists`, "info");
+        return;
+      }
+
+      createSavedSearch(input);
+      addToast(`Search "${input.name}" saved successfully!`, "success");
+    },
+    [createSavedSearch, findSimilarSearch, addToast]
+  );
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
@@ -73,6 +95,29 @@ function BrowseContent() {
                 )}
               </button>
 
+              {/* Save Search button - only show when filters are active */}
+              {hasActiveFilters && (
+                <button
+                  onClick={() => setIsSaveModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-colors"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                    />
+                  </svg>
+                  <span className="hidden sm:inline">Save Search</span>
+                </button>
+              )}
+
               {/* Sort dropdown */}
               <select
                 value={sortBy}
@@ -96,6 +141,14 @@ function BrowseContent() {
       <FilterDrawer
         isOpen={isFilterDrawerOpen}
         onClose={() => setIsFilterDrawerOpen(false)}
+      />
+
+      {/* Save search modal */}
+      <SaveSearchModal
+        isOpen={isSaveModalOpen}
+        onClose={() => setIsSaveModalOpen(false)}
+        onSave={handleSaveSearch}
+        filters={filters}
       />
     </div>
   );
