@@ -1,29 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useListings } from "@/hooks/useListings";
+import { useFilters } from "@/hooks/useFilters";
 import { ListingGrid } from "@/components/ListingGrid";
-import { sortListings } from "@/lib/matching";
+import { FilterSidebar } from "@/components/FilterSidebar";
+import { getMatchingListings, sortListings } from "@/lib/matching";
 import type { SortOption } from "@/lib/types";
 
-export default function BrowsePage() {
+function BrowseContent() {
   const { listings, isLoading } = useListings();
+  const { filters, hasActiveFilters, activeFilterCount } = useFilters();
   const [sortBy, setSortBy] = useState<SortOption>("recent");
 
-  const sortedListings = sortListings(listings, sortBy);
+  // Apply filters then sort
+  const filteredListings = getMatchingListings(listings, filters);
+  const sortedListings = sortListings(filteredListings, sortBy);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
       <div className="flex gap-6 lg:gap-8">
-        {/* Filter sidebar placeholder - hidden on mobile */}
+        {/* Filter sidebar - hidden on mobile */}
         <aside className="hidden md:block w-64 lg:w-72 shrink-0">
           <div className="sticky top-24">
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <h2 className="font-semibold text-gray-900 mb-4">Filters</h2>
-              <p className="text-sm text-gray-500">
-                Filter controls will be added in Phase 6
-              </p>
-            </div>
+            <FilterSidebar />
           </div>
         </aside>
 
@@ -38,6 +38,8 @@ export default function BrowsePage() {
               <p className="text-sm text-gray-500 mt-1">
                 {isLoading
                   ? "Loading..."
+                  : hasActiveFilters
+                  ? `${sortedListings.length} of ${listings.length} listings match your filters`
                   : `${listings.length} listings available`}
               </p>
             </div>
@@ -59,6 +61,11 @@ export default function BrowsePage() {
                   />
                 </svg>
                 Filters
+                {activeFilterCount > 0 && (
+                  <span className="bg-primary-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                    {activeFilterCount}
+                  </span>
+                )}
               </button>
 
               {/* Sort dropdown */}
@@ -77,6 +84,43 @@ export default function BrowsePage() {
 
           {/* Listings grid */}
           <ListingGrid listings={sortedListings} isLoading={isLoading} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function BrowsePage() {
+  return (
+    <Suspense fallback={<BrowsePageSkeleton />}>
+      <BrowseContent />
+    </Suspense>
+  );
+}
+
+function BrowsePageSkeleton() {
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="flex gap-6 lg:gap-8">
+        <aside className="hidden md:block w-64 lg:w-72 shrink-0">
+          <div className="bg-white rounded-lg border border-gray-200 p-4 h-96 animate-pulse" />
+        </aside>
+        <div className="flex-1">
+          <div className="h-8 bg-gray-200 rounded w-48 mb-6 animate-pulse" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="bg-white rounded-lg border border-gray-200 overflow-hidden animate-pulse"
+              >
+                <div className="aspect-[4/3] bg-gray-200" />
+                <div className="p-4">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+                  <div className="h-6 bg-gray-200 rounded w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
