@@ -5,6 +5,7 @@ import { useListings } from "@/hooks/useListings";
 import { useFilters } from "@/hooks/useFilters";
 import { ListingGrid } from "@/components/ListingGrid";
 import { FilterSidebar } from "@/components/FilterSidebar";
+import { FilterDrawer } from "@/components/FilterDrawer";
 import { getMatchingListings, sortListings } from "@/lib/matching";
 import type { SortOption } from "@/lib/types";
 
@@ -12,6 +13,7 @@ function BrowseContent() {
   const { listings, isLoading } = useListings();
   const { filters, hasActiveFilters, activeFilterCount } = useFilters();
   const [sortBy, setSortBy] = useState<SortOption>("recent");
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   // Apply filters then sort
   const filteredListings = getMatchingListings(listings, filters);
@@ -45,8 +47,11 @@ function BrowseContent() {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Mobile filter button placeholder */}
-              <button className="md:hidden flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+              {/* Mobile filter button */}
+              <button
+                onClick={() => setIsFilterDrawerOpen(true)}
+                className="md:hidden flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
                 <svg
                   className="w-4 h-4"
                   fill="none"
@@ -86,6 +91,12 @@ function BrowseContent() {
           <ListingGrid listings={sortedListings} isLoading={isLoading} />
         </div>
       </div>
+
+      {/* Mobile filter drawer */}
+      <FilterDrawer
+        isOpen={isFilterDrawerOpen}
+        onClose={() => setIsFilterDrawerOpen(false)}
+      />
     </div>
   );
 }
