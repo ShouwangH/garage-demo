@@ -8,11 +8,13 @@ import { useToast } from "@/hooks/useToast";
 import { SavedSearchCard } from "@/components/SavedSearchCard";
 import { SaveSearchModal } from "@/components/SaveSearchModal";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
+import { EmailPreviewModal } from "@/components/EmailPreviewModal";
 import { Button } from "@/components/ui";
+import { getMatchingListings } from "@/lib/matching";
 import type { SavedSearch, SavedSearchInput } from "@/lib/types";
 
 function SavedSearchesContent() {
-  const { listings } = useListings();
+  const { listings, simulateNewListing } = useListings();
   const {
     savedSearches,
     isLoading,
@@ -33,6 +35,11 @@ function SavedSearchesContent() {
     id: string;
     name: string;
   } | null>(null);
+
+  // Email preview modal state
+  const [previewingSearch, setPreviewingSearch] = useState<
+    (SavedSearch & { matchCount: number }) | null
+  >(null);
 
   // Handle edit
   const handleEdit = useCallback(
@@ -59,12 +66,15 @@ function SavedSearchesContent() {
   );
 
   // Handle delete click
-  const handleDeleteClick = useCallback((id: string) => {
-    const search = savedSearches.find((s) => s.id === id);
-    if (search) {
-      setDeletingSearch({ id, name: search.name });
-    }
-  }, [savedSearches]);
+  const handleDeleteClick = useCallback(
+    (id: string) => {
+      const search = savedSearches.find((s) => s.id === id);
+      if (search) {
+        setDeletingSearch({ id, name: search.name });
+      }
+    },
+    [savedSearches]
+  );
 
   // Handle confirm delete
   const handleConfirmDelete = useCallback(() => {
@@ -75,9 +85,48 @@ function SavedSearchesContent() {
     setDeletingSearch(null);
   }, [deletingSearch, deleteSavedSearch, addToast]);
 
+  // Handle email preview
+  const handlePreviewEmail = useCallback(
+    (search: SavedSearch & { matchCount: number }) => {
+      setPreviewingSearch(search);
+    },
+    []
+  );
+
+  // Handle simulate new listing
+  const handleSimulateNewListing = useCallback(() => {
+    const newListing = simulateNewListing();
+    if (newListing) {
+      // Find which saved searches match this new listing
+      const matchingSearches = savedSearches.filter((search) => {
+        const matches = getMatchingListings([newListing], search.filters);
+        return matches.length > 0;
+      });
+
+      if (matchingSearches.length > 0) {
+        const searchNames = matchingSearches
+          .map((s) => `"${s.name}"`)
+          .join(", ");
+        addToast(
+          `New listing added! Matches ${matchingSearches.length} saved ${
+            matchingSearches.length === 1 ? "search" : "searches"
+          }: ${searchNames}`,
+          "success"
+        );
+      } else {
+        addToast("New listing added!", "success");
+      }
+    }
+  }, [simulateNewListing, savedSearches, addToast]);
+
   if (isLoading) {
     return <SavedSearchesSkeleton />;
   }
+
+  // Get matching listings for email preview
+  const previewMatchingListings = previewingSearch
+    ? getMatchingListings(listings, previewingSearch.filters)
+    : [];
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
@@ -94,9 +143,29 @@ function SavedSearchesContent() {
           </p>
         </div>
 
-        <Link href="/">
-          <Button variant="primary">Create New Search</Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          {/* Simulate button - for demo purposes */}
+          <Button variant="secondary" onClick={handleSimulateNewListing}>
+            <svg
+              className="w-4 h-4 mr-2"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
+            </svg>
+            Simulate Listing
+          </Button>
+
+          <Link href="/">
+            <Button variant="primary">Create New Search</Button>
+          </Link>
+        </div>
       </div>
 
       {/* Saved searches list */}
@@ -109,6 +178,7 @@ function SavedSearchesContent() {
               onToggleStatus={toggleSearchStatus}
               onEdit={handleEdit}
               onDelete={handleDeleteClick}
+              onPreviewEmail={handlePreviewEmail}
             />
           ))}
         </div>
@@ -138,6 +208,16 @@ function SavedSearchesContent() {
           onClose={() => setDeletingSearch(null)}
           onConfirm={handleConfirmDelete}
           searchName={deletingSearch.name}
+        />
+      )}
+
+      {/* Email preview modal */}
+      {previewingSearch && (
+        <EmailPreviewModal
+          isOpen={true}
+          onClose={() => setPreviewingSearch(null)}
+          search={previewingSearch}
+          matchingListings={previewMatchingListings}
         />
       )}
     </div>
@@ -184,7 +264,10 @@ function SavedSearchesSkeleton() {
           <div className="h-8 bg-gray-200 rounded w-56 mb-2 animate-pulse" />
           <div className="h-4 bg-gray-200 rounded w-40 animate-pulse" />
         </div>
-        <div className="h-10 bg-gray-200 rounded w-40 animate-pulse" />
+        <div className="flex gap-3">
+          <div className="h-10 bg-gray-200 rounded w-36 animate-pulse" />
+          <div className="h-10 bg-gray-200 rounded w-40 animate-pulse" />
+        </div>
       </div>
 
       <div className="space-y-4">
