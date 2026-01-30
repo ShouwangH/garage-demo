@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { formatFilterSummary, getRelativeTime } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -9,7 +10,7 @@ interface SavedSearchCardProps {
   search: SavedSearch & { matchCount: number };
   onToggleStatus?: (id: string) => void;
   onDelete?: (id: string) => void;
-  onEdit?: (id: string) => void;
+  onEdit?: (search: SavedSearch & { matchCount: number }) => void;
 }
 
 export function SavedSearchCard({
@@ -18,8 +19,24 @@ export function SavedSearchCard({
   onDelete,
   onEdit,
 }: SavedSearchCardProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const filterSummary = formatFilterSummary(search.filters);
   const isActive = search.status === "active";
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isMenuOpen]);
 
   // Build URL with filters for "View Matches" link
   const buildFilterUrl = (filters: SearchFilters): string => {
@@ -44,6 +61,16 @@ export function SavedSearchCard({
 
     const queryString = params.toString();
     return queryString ? `/?${queryString}` : "/";
+  };
+
+  const handleEdit = () => {
+    setIsMenuOpen(false);
+    onEdit?.(search);
+  };
+
+  const handleDelete = () => {
+    setIsMenuOpen(false);
+    onDelete?.(search.id);
   };
 
   return (
@@ -158,12 +185,19 @@ export function SavedSearchCard({
             </button>
           )}
 
-          {/* More actions dropdown placeholder - will be enhanced in Phase 12 */}
+          {/* More actions dropdown */}
           {(onEdit || onDelete) && (
-            <div className="relative">
+            <div className="relative" ref={menuRef}>
               <button
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className={cn(
+                  "p-2 rounded-lg transition-colors",
+                  isMenuOpen
+                    ? "bg-gray-100 text-gray-700"
+                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                )}
                 aria-label="More actions"
+                aria-expanded={isMenuOpen}
               >
                 <svg
                   className="w-5 h-5"
@@ -179,6 +213,54 @@ export function SavedSearchCard({
                   />
                 </svg>
               </button>
+
+              {/* Dropdown menu */}
+              {isMenuOpen && (
+                <div className="absolute right-0 mt-1 w-36 bg-white rounded-lg border border-gray-200 shadow-lg py-1 z-10">
+                  {onEdit && (
+                    <button
+                      onClick={handleEdit}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        />
+                      </svg>
+                      Edit
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      onClick={handleDelete}
+                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                      Delete
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

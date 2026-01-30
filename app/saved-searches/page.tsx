@@ -1,16 +1,79 @@
 "use client";
 
-import { Suspense } from "react";
+import { useState, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useListings } from "@/hooks/useListings";
 import { useSavedSearches } from "@/hooks/useSavedSearches";
+import { useToast } from "@/hooks/useToast";
 import { SavedSearchCard } from "@/components/SavedSearchCard";
+import { SaveSearchModal } from "@/components/SaveSearchModal";
+import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { Button } from "@/components/ui";
+import type { SavedSearch, SavedSearchInput } from "@/lib/types";
 
 function SavedSearchesContent() {
   const { listings } = useListings();
-  const { savedSearches, isLoading, toggleSearchStatus, counts } =
-    useSavedSearches(listings);
+  const {
+    savedSearches,
+    isLoading,
+    toggleSearchStatus,
+    updateSavedSearch,
+    deleteSavedSearch,
+    counts,
+  } = useSavedSearches(listings);
+  const { addToast } = useToast();
+
+  // Edit modal state
+  const [editingSearch, setEditingSearch] = useState<
+    (SavedSearch & { matchCount: number }) | null
+  >(null);
+
+  // Delete modal state
+  const [deletingSearch, setDeletingSearch] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+
+  // Handle edit
+  const handleEdit = useCallback(
+    (search: SavedSearch & { matchCount: number }) => {
+      setEditingSearch(search);
+    },
+    []
+  );
+
+  // Handle save edit
+  const handleSaveEdit = useCallback(
+    (input: SavedSearchInput) => {
+      if (!editingSearch) return;
+
+      updateSavedSearch(editingSearch.id, {
+        name: input.name,
+        email: input.email,
+        frequency: input.frequency,
+      });
+      addToast(`Search "${input.name}" updated successfully!`, "success");
+      setEditingSearch(null);
+    },
+    [editingSearch, updateSavedSearch, addToast]
+  );
+
+  // Handle delete click
+  const handleDeleteClick = useCallback((id: string) => {
+    const search = savedSearches.find((s) => s.id === id);
+    if (search) {
+      setDeletingSearch({ id, name: search.name });
+    }
+  }, [savedSearches]);
+
+  // Handle confirm delete
+  const handleConfirmDelete = useCallback(() => {
+    if (!deletingSearch) return;
+
+    deleteSavedSearch(deletingSearch.id);
+    addToast(`Search "${deletingSearch.name}" deleted`, "success");
+    setDeletingSearch(null);
+  }, [deletingSearch, deleteSavedSearch, addToast]);
 
   if (isLoading) {
     return <SavedSearchesSkeleton />;
@@ -44,11 +107,38 @@ function SavedSearchesContent() {
               key={search.id}
               search={search}
               onToggleStatus={toggleSearchStatus}
+              onEdit={handleEdit}
+              onDelete={handleDeleteClick}
             />
           ))}
         </div>
       ) : (
         <EmptyState />
+      )}
+
+      {/* Edit modal */}
+      {editingSearch && (
+        <SaveSearchModal
+          isOpen={true}
+          onClose={() => setEditingSearch(null)}
+          onSave={handleSaveEdit}
+          filters={editingSearch.filters}
+          existingSearch={{
+            name: editingSearch.name,
+            email: editingSearch.email,
+            frequency: editingSearch.frequency,
+          }}
+        />
+      )}
+
+      {/* Delete confirmation modal */}
+      {deletingSearch && (
+        <ConfirmDeleteModal
+          isOpen={true}
+          onClose={() => setDeletingSearch(null)}
+          onConfirm={handleConfirmDelete}
+          searchName={deletingSearch.name}
+        />
       )}
     </div>
   );
