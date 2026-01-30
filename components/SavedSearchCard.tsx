@@ -11,6 +11,7 @@ interface SavedSearchCardProps {
   onToggleStatus?: (id: string) => void;
   onDelete?: (id: string) => void;
   onEdit?: (search: SavedSearch & { matchCount: number }) => void;
+  onPreviewEmail?: (search: SavedSearch & { matchCount: number }) => void;
 }
 
 export function SavedSearchCard({
@@ -18,6 +19,7 @@ export function SavedSearchCard({
   onToggleStatus,
   onDelete,
   onEdit,
+  onPreviewEmail,
 }: SavedSearchCardProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -71,6 +73,11 @@ export function SavedSearchCard({
   const handleDelete = () => {
     setIsMenuOpen(false);
     onDelete?.(search.id);
+  };
+
+  const handlePreviewEmail = () => {
+    setIsMenuOpen(false);
+    onPreviewEmail?.(search);
   };
 
   return (
@@ -186,7 +193,7 @@ export function SavedSearchCard({
           )}
 
           {/* More actions dropdown */}
-          {(onEdit || onDelete) && (
+          {(onEdit || onDelete || onPreviewEmail) && (
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -217,6 +224,27 @@ export function SavedSearchCard({
               {/* Dropdown menu */}
               {isMenuOpen && (
                 <div className="absolute right-0 mt-1 w-36 bg-white rounded-lg border border-gray-200 shadow-lg py-1 z-10">
+                  {onPreviewEmail && (
+                    <button
+                      onClick={handlePreviewEmail}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                        />
+                      </svg>
+                      Preview Email
+                    </button>
+                  )}
                   {onEdit && (
                     <button
                       onClick={handleEdit}
