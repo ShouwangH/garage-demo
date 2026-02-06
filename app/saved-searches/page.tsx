@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, Suspense } from "react";
+import { useState, useCallback, Suspense, useMemo } from "react";
 import Link from "next/link";
 import { useListings } from "@/hooks/useListings";
 import { useSavedSearches } from "@/hooks/useSavedSearches";
@@ -8,11 +8,14 @@ import { useToast } from "@/hooks/useToast";
 import { SavedSearchCard } from "@/components/SavedSearchCard";
 import { SaveSearchModal } from "@/components/SaveSearchModal";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
+import { EmailPreviewModal } from "@/components/EmailPreviewModal";
 import { Button } from "@/components/ui";
+import { generateMatchingListing } from "@/lib/mockData";
+import { getMatchingListings } from "@/lib/matching";
 import type { SavedSearch, SavedSearchInput } from "@/lib/types";
 
 function SavedSearchesContent() {
-  const { listings } = useListings();
+  const { listings, addListing, resetToInitial } = useListings();
   const {
     savedSearches,
     isLoading,
@@ -20,6 +23,7 @@ function SavedSearchesContent() {
     updateSavedSearch,
     deleteSavedSearch,
     counts,
+    refreshSavedSearches,
   } = useSavedSearches(listings);
   const { addToast } = useToast();
 
@@ -34,6 +38,11 @@ function SavedSearchesContent() {
     name: string;
   } | null>(null);
 
+  // Email preview modal state
+  const [previewingSearch, setPreviewingSearch] = useState<
+    (SavedSearch & { matchCount: number }) | null
+  >(null);
+
   // Handle edit
   const handleEdit = useCallback(
     (search: SavedSearch & { matchCount: number }) => {
@@ -44,8 +53,8 @@ function SavedSearchesContent() {
 
   // Handle save edit
   const handleSaveEdit = useCallback(
-    (input: SavedSearchInput) => {
-      if (!editingSearch) return;
+    (input: SavedSearchInput): boolean => {
+      if (!editingSearch) return false;
 
       updateSavedSearch(editingSearch.id, {
         name: input.name,
@@ -54,17 +63,34 @@ function SavedSearchesContent() {
       });
       addToast(`Search "${input.name}" updated successfully!`, "success");
       setEditingSearch(null);
+      return true;
     },
     [editingSearch, updateSavedSearch, addToast]
   );
 
+  // Memoize to prevent useEffect reset on parent re-render
+  const editModalProps = useMemo(
+    () =>
+      editingSearch
+        ? {
+            name: editingSearch.name,
+            email: editingSearch.email,
+            frequency: editingSearch.frequency,
+          }
+        : undefined,
+    [editingSearch]
+  );
+
   // Handle delete click
-  const handleDeleteClick = useCallback((id: string) => {
-    const search = savedSearches.find((s) => s.id === id);
-    if (search) {
-      setDeletingSearch({ id, name: search.name });
-    }
-  }, [savedSearches]);
+  const handleDeleteClick = useCallback(
+    (id: string) => {
+      const search = savedSearches.find((s) => s.id === id);
+      if (search) {
+        setDeletingSearch({ id, name: search.name });
+      }
+    },
+    [savedSearches]
+  );
 
   // Handle confirm delete
   const handleConfirmDelete = useCallback(() => {
@@ -75,9 +101,42 @@ function SavedSearchesContent() {
     setDeletingSearch(null);
   }, [deletingSearch, deleteSavedSearch, addToast]);
 
+  // Handle email preview
+  const handlePreviewEmail = useCallback(
+    (search: SavedSearch & { matchCount: number }) => {
+      setPreviewingSearch(search);
+    },
+    []
+  );
+
+  // Handle simulate match for a specific search
+  const handleSimulateMatch = useCallback(
+    (search: SavedSearch & { matchCount: number }) => {
+      const newListing = generateMatchingListing(search.filters);
+      addListing(newListing);
+      addToast(
+        `New listing "${newListing.title}" added! Matches "${search.name}"`,
+        "success"
+      );
+    },
+    [addListing, addToast]
+  );
+
+  // Handle reset demo data
+  const handleResetDemo = useCallback(() => {
+    resetToInitial();
+    refreshSavedSearches();
+    addToast("Demo reset to initial state", "info");
+  }, [resetToInitial, refreshSavedSearches, addToast]);
+
   if (isLoading) {
     return <SavedSearchesSkeleton />;
   }
+
+  // Get matching listings for email preview
+  const previewMatchingListings = previewingSearch
+    ? getMatchingListings(listings, previewingSearch.filters)
+    : [];
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
@@ -94,9 +153,27 @@ function SavedSearchesContent() {
           </p>
         </div>
 
-        <Link href="/">
-          <Button variant="primary">Create New Search</Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Button variant="secondary" onClick={handleResetDemo}>
+            <svg
+              className="w-4 h-4 mr-2"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            Reset Demo
+          </Button>
+          <Link href="/">
+            <Button variant="primary">Create New Search</Button>
+          </Link>
+        </div>
       </div>
 
       {/* Saved searches list */}
@@ -109,6 +186,8 @@ function SavedSearchesContent() {
               onToggleStatus={toggleSearchStatus}
               onEdit={handleEdit}
               onDelete={handleDeleteClick}
+              onPreviewEmail={handlePreviewEmail}
+              onSimulateMatch={handleSimulateMatch}
             />
           ))}
         </div>
@@ -123,11 +202,7 @@ function SavedSearchesContent() {
           onClose={() => setEditingSearch(null)}
           onSave={handleSaveEdit}
           filters={editingSearch.filters}
-          existingSearch={{
-            name: editingSearch.name,
-            email: editingSearch.email,
-            frequency: editingSearch.frequency,
-          }}
+          existingSearch={editModalProps}
         />
       )}
 
@@ -138,6 +213,16 @@ function SavedSearchesContent() {
           onClose={() => setDeletingSearch(null)}
           onConfirm={handleConfirmDelete}
           searchName={deletingSearch.name}
+        />
+      )}
+
+      {/* Email preview modal */}
+      {previewingSearch && (
+        <EmailPreviewModal
+          isOpen={true}
+          onClose={() => setPreviewingSearch(null)}
+          search={previewingSearch}
+          matchingListings={previewMatchingListings}
         />
       )}
     </div>
@@ -184,7 +269,10 @@ function SavedSearchesSkeleton() {
           <div className="h-8 bg-gray-200 rounded w-56 mb-2 animate-pulse" />
           <div className="h-4 bg-gray-200 rounded w-40 animate-pulse" />
         </div>
-        <div className="h-10 bg-gray-200 rounded w-40 animate-pulse" />
+        <div className="flex gap-3">
+          <div className="h-10 bg-gray-200 rounded w-36 animate-pulse" />
+          <div className="h-10 bg-gray-200 rounded w-40 animate-pulse" />
+        </div>
       </div>
 
       <div className="space-y-4">

@@ -323,7 +323,7 @@ export const INITIAL_LISTINGS: Listing[] = [
 export const DEFAULT_SAVED_SEARCH: SavedSearch = {
   id: "saved-001",
   name: "Texas Pierce Pumpers Under $150k",
-  email: "chief.johnson@demo-fd.gov",
+  email: "demo@example.com",
   frequency: "daily",
   status: "active",
   createdAt: "2024-01-01T12:00:00Z",
@@ -334,6 +334,79 @@ export const DEFAULT_SAVED_SEARCH: SavedSearch = {
     priceMax: 150000,
   },
 };
+
+// Demo filter preset - different from saved search for clickthrough demo
+export const DEMO_FILTER_PRESET = {
+  filters: {
+    category: "Fire Apparatus",
+    manufacturers: ["E-One"],
+    priceMax: 200000,
+  },
+  // Pre-filled values for the save modal
+  suggestedName: "E-One Fire Apparatus Under $200k",
+  suggestedEmail: "demo@firestation.gov",
+};
+
+// Generate a listing that matches given search filters
+export function generateMatchingListing(filters: {
+  category?: string;
+  manufacturers?: string[];
+  state?: string;
+  priceMin?: number;
+  priceMax?: number;
+  yearMin?: number;
+  yearMax?: number;
+}): Listing {
+  const manufacturer = filters.manufacturers?.[0] || "Pierce";
+  const state = filters.state || "TX";
+  const category = filters.category || "Fire Apparatus";
+
+  // Price within range
+  const minPrice = filters.priceMin || 50000;
+  const maxPrice = filters.priceMax || 200000;
+  const price = Math.floor(minPrice + Math.random() * (maxPrice - minPrice));
+
+  // Year within range
+  const minYear = filters.yearMin || 2010;
+  const maxYear = filters.yearMax || 2022;
+  const year = Math.floor(minYear + Math.random() * (maxYear - minYear));
+
+  const cities: Record<string, string[]> = {
+    TX: ["Houston", "Dallas", "Austin", "San Antonio", "Fort Worth"],
+    CA: ["Los Angeles", "San Diego", "Sacramento", "San Francisco"],
+    FL: ["Miami", "Tampa", "Orlando", "Jacksonville"],
+    NY: ["New York", "Buffalo", "Albany", "Syracuse"],
+  };
+  const stateCities = cities[state] || ["Metro City"];
+  const city = stateCities[Math.floor(Math.random() * stateCities.length)];
+
+  const models: Record<string, string[]> = {
+    Pierce: ["Enforcer", "Velocity", "Arrow XT", "Saber", "Dash CF"],
+    "E-One": ["Typhoon", "Quest", "Cyclone II"],
+    Seagrave: ["Marauder II", "Aerialscope"],
+    KME: ["Predator", "Severe Service"],
+  };
+  const modelList = models[manufacturer] || ["Custom"];
+  const model = modelList[Math.floor(Math.random() * modelList.length)];
+
+  return {
+    id: `gen-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    title: `${year} ${manufacturer} ${model} Pumper`,
+    year,
+    manufacturer,
+    category: category as Listing["category"],
+    type: "Pumper",
+    price,
+    mileage: Math.floor(20000 + Math.random() * 60000),
+    pumpGPM: [1250, 1500, 1750, 2000][Math.floor(Math.random() * 4)],
+    tankGallons: [500, 750, 1000][Math.floor(Math.random() * 3)],
+    city,
+    state,
+    imageUrl: `https://placehold.co/400x300/dc2626/ffffff?text=${year}+${manufacturer}`,
+    listingType: "buy_now",
+    createdAt: new Date().toISOString(),
+  };
+}
 
 // Pre-crafted listings that match DEFAULT_SAVED_SEARCH
 // These are NOT in INITIAL_LISTINGS - added when "Simulate" is clicked
