@@ -1,8 +1,34 @@
 "use client";
 
+import Link from "next/link";
 import { Modal } from "@/components/ui/Modal";
 import { formatPrice, formatNumber, formatFilterSummary } from "@/lib/utils";
-import type { SavedSearch, Listing } from "@/lib/types";
+import type { SavedSearch, Listing, SearchFilters } from "@/lib/types";
+
+// Build URL with filters for browse page
+function buildFilterUrl(filters: SearchFilters): string {
+  const params = new URLSearchParams();
+
+  if (filters.category) params.set("category", filters.category);
+  if (filters.listingType && filters.listingType !== "all") {
+    params.set("listingType", filters.listingType);
+  }
+  if (filters.priceMin !== undefined) params.set("priceMin", String(filters.priceMin));
+  if (filters.priceMax !== undefined) params.set("priceMax", String(filters.priceMax));
+  if (filters.yearMin !== undefined) params.set("yearMin", String(filters.yearMin));
+  if (filters.yearMax !== undefined) params.set("yearMax", String(filters.yearMax));
+  if (filters.mileageMin !== undefined) params.set("mileageMin", String(filters.mileageMin));
+  if (filters.mileageMax !== undefined) params.set("mileageMax", String(filters.mileageMax));
+  if (filters.manufacturers && filters.manufacturers.length > 0) {
+    params.set("manufacturers", filters.manufacturers.join(","));
+  }
+  if (filters.pumpSizeMin !== undefined) params.set("pumpSizeMin", String(filters.pumpSizeMin));
+  if (filters.tankSizeMin !== undefined) params.set("tankSizeMin", String(filters.tankSizeMin));
+  if (filters.state) params.set("state", filters.state);
+
+  const queryString = params.toString();
+  return queryString ? `/?${queryString}` : "/";
+}
 
 interface EmailPreviewModalProps {
   isOpen: boolean;
@@ -121,9 +147,13 @@ export function EmailPreviewModal({
           )}
 
           <div className="text-center">
-            <div className="inline-block px-6 py-3 bg-primary-500 text-white font-semibold rounded-lg">
+            <Link
+              href={buildFilterUrl(search.filters)}
+              onClick={onClose}
+              className="inline-block px-6 py-3 bg-primary-500 text-white font-semibold rounded-lg hover:bg-primary-600 transition-colors"
+            >
               View All Matches on Garage
-            </div>
+            </Link>
           </div>
 
           {/* Footer */}

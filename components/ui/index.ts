@@ -14,3 +14,7 @@ export { Badge } from "./Badge";
 export type { BadgeProps } from "./Badge";
 
 export { ToastContainer } from "./Toast";
+
+export { RangeSlider } from "./RangeSlider";
+
+export { MultiSelect } from "./MultiSelect";

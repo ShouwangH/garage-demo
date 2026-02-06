@@ -1,286 +1,350 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import { useFilters } from "@/hooks/useFilters";
 import {
   CATEGORIES,
   LISTING_TYPE_OPTIONS,
-  MANUFACTURERS,
+  MANUFACTURER_OPTIONS,
   US_STATES,
   FILTER_RANGES,
 } from "@/lib/constants";
+import { Select, RangeSlider, MultiSelect } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { Category, ListingTypeFilter } from "@/lib/types";
 
-export function FilterSidebar() {
-  const { filters, setFilter, clearFilters, hasActiveFilters } = useFilters();
+interface FilterSidebarProps {
+  onLoadDemoFilters?: () => void;
+  onSaveSearch?: () => void;
+}
+
+export function FilterSidebar({ onLoadDemoFilters, onSaveSearch }: FilterSidebarProps) {
+  const { filters, setFilter, setFilters, clearFilters, hasActiveFilters } =
+    useFilters();
+
+  // Format functions for sliders
+  const formatPrice = useCallback(
+    (value: number) =>
+      value === 0 ? "$0" : `$${(value / 1000).toFixed(0)}k`,
+    []
+  );
+  const formatYear = useCallback((value: number) => String(value), []);
+  const formatMileage = useCallback(
+    (value: number) =>
+      value === 0 ? "0" : `${(value / 1000).toFixed(0)}k`,
+    []
+  );
+
+  // Handle range slider changes
+  const handlePriceChange = useCallback(
+    (value: [number, number]) => {
+      setFilters({
+        priceMin: value[0] > FILTER_RANGES.price.min ? value[0] : undefined,
+        priceMax: value[1] < FILTER_RANGES.price.max ? value[1] : undefined,
+      });
+    },
+    [setFilters]
+  );
+
+  const handleYearChange = useCallback(
+    (value: [number, number]) => {
+      setFilters({
+        yearMin: value[0] > FILTER_RANGES.year.min ? value[0] : undefined,
+        yearMax: value[1] < FILTER_RANGES.year.max ? value[1] : undefined,
+      });
+    },
+    [setFilters]
+  );
+
+  const handleMileageChange = useCallback(
+    (value: [number, number]) => {
+      setFilters({
+        mileageMin: value[0] > FILTER_RANGES.mileage.min ? value[0] : undefined,
+        mileageMax: value[1] < FILTER_RANGES.mileage.max ? value[1] : undefined,
+      });
+    },
+    [setFilters]
+  );
+
+  // Category options with "All" option
+  const categoryOptions = [
+    { value: "", label: "All Categories" },
+    ...CATEGORIES,
+  ];
+
+  // State options with "All" option
+  const stateOptions = [
+    { value: "", label: "All States" },
+    ...US_STATES.map((s) => ({ value: s.abbreviation, label: s.name })),
+  ];
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-gray-900">Filters</h2>
-        {hasActiveFilters && (
-          <button
-            onClick={clearFilters}
-            className="text-sm text-primary-600 hover:text-primary-700"
+    <div className="space-y-3">
+      {/* Demo button - above filters */}
+      {onLoadDemoFilters && !hasActiveFilters && (
+        <button
+          onClick={onLoadDemoFilters}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
           >
-            Clear all
-          </button>
-        )}
-      </div>
-
-      <div className="space-y-6">
-        {/* Category */}
-        <FilterSection title="Category">
-          <select
-            value={filters.category || ""}
-            onChange={(e) =>
-              setFilter("category", (e.target.value as Category) || undefined)
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            <option value="">All Categories</option>
-            {CATEGORIES.map((cat) => (
-              <option key={cat.value} value={cat.value}>
-                {cat.label}
-              </option>
-            ))}
-          </select>
-        </FilterSection>
-
-        {/* Listing Type */}
-        <FilterSection title="Listing Type">
-          <div className="flex gap-2">
-            {LISTING_TYPE_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                onClick={() =>
-                  setFilter(
-                    "listingType",
-                    option.value === "all"
-                      ? undefined
-                      : (option.value as ListingTypeFilter)
-                  )
-                }
-                className={cn(
-                  "flex-1 px-3 py-1.5 text-sm rounded-lg border transition-colors",
-                  (filters.listingType || "all") === option.value
-                    ? "bg-primary-50 border-primary-500 text-primary-700"
-                    : "border-gray-300 text-gray-600 hover:bg-gray-50"
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </FilterSection>
-
-        {/* Price Range */}
-        <FilterSection title="Price">
-          <div className="flex gap-2 items-center">
-            <input
-              type="number"
-              placeholder="Min"
-              value={filters.priceMin || ""}
-              onChange={(e) =>
-                setFilter(
-                  "priceMin",
-                  e.target.value ? parseInt(e.target.value, 10) : undefined
-                )
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              min={FILTER_RANGES.price.min}
-              step={FILTER_RANGES.price.step}
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M13 10V3L4 14h7v7l9-11h-7z"
             />
-            <span className="text-gray-400">-</span>
-            <input
-              type="number"
-              placeholder="Max"
-              value={filters.priceMax || ""}
-              onChange={(e) =>
-                setFilter(
-                  "priceMax",
-                  e.target.value ? parseInt(e.target.value, 10) : undefined
-                )
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              min={FILTER_RANGES.price.min}
-              step={FILTER_RANGES.price.step}
-            />
-          </div>
-        </FilterSection>
+          </svg>
+          Load Demo Filters
+        </button>
+      )}
 
-        {/* Year Range */}
-        <FilterSection title="Year">
-          <div className="flex gap-2 items-center">
-            <input
-              type="number"
-              placeholder="Min"
-              value={filters.yearMin || ""}
-              onChange={(e) =>
-                setFilter(
-                  "yearMin",
-                  e.target.value ? parseInt(e.target.value, 10) : undefined
-                )
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              min={FILTER_RANGES.year.min}
-              max={FILTER_RANGES.year.max}
-            />
-            <span className="text-gray-400">-</span>
-            <input
-              type="number"
-              placeholder="Max"
-              value={filters.yearMax || ""}
-              onChange={(e) =>
-                setFilter(
-                  "yearMax",
-                  e.target.value ? parseInt(e.target.value, 10) : undefined
-                )
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              min={FILTER_RANGES.year.min}
-              max={FILTER_RANGES.year.max}
-            />
-          </div>
-        </FilterSection>
+      <div className="bg-white rounded-lg border border-gray-200 flex flex-col max-h-[calc(100vh-200px)]">
+        <div className="flex items-center justify-between p-4 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-900">Filters</h2>
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="text-sm text-primary-600 hover:text-primary-700"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
 
-        {/* Mileage Range */}
-        <FilterSection title="Mileage">
-          <div className="flex gap-2 items-center">
-            <input
-              type="number"
-              placeholder="Min"
-              value={filters.mileageMin || ""}
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="space-y-1">
+          {/* Category */}
+          <CollapsibleSection title="Category">
+            <Select
+              options={categoryOptions}
+              value={filters.category || ""}
               onChange={(e) =>
-                setFilter(
-                  "mileageMin",
-                  e.target.value ? parseInt(e.target.value, 10) : undefined
-                )
+                setFilter("category", (e.target.value as Category) || undefined)
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              min={FILTER_RANGES.mileage.min}
-              step={FILTER_RANGES.mileage.step}
             />
-            <span className="text-gray-400">-</span>
-            <input
-              type="number"
-              placeholder="Max"
-              value={filters.mileageMax || ""}
-              onChange={(e) =>
-                setFilter(
-                  "mileageMax",
-                  e.target.value ? parseInt(e.target.value, 10) : undefined
-                )
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              min={FILTER_RANGES.mileage.min}
-              step={FILTER_RANGES.mileage.step}
-            />
-          </div>
-        </FilterSection>
+          </CollapsibleSection>
 
-        {/* Manufacturers */}
-        <FilterSection title="Manufacturer">
-          <div className="max-h-40 overflow-y-auto space-y-2">
-            {MANUFACTURERS.map((manufacturer) => {
-              const isSelected =
-                filters.manufacturers?.includes(manufacturer) || false;
-              return (
-                <label
-                  key={manufacturer}
-                  className="flex items-center gap-2 cursor-pointer"
+          {/* Listing Type */}
+          <CollapsibleSection title="Listing Type">
+            <div className="flex gap-2">
+              {LISTING_TYPE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() =>
+                    setFilter(
+                      "listingType",
+                      option.value === "all"
+                        ? undefined
+                        : (option.value as ListingTypeFilter)
+                    )
+                  }
+                  className={cn(
+                    "flex-1 px-3 py-1.5 text-sm rounded-lg border transition-colors",
+                    (filters.listingType || "all") === option.value
+                      ? "bg-primary-50 border-primary-500 text-primary-700"
+                      : "border-gray-300 text-gray-600 hover:bg-gray-50"
+                  )}
                 >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => {
-                      const current = filters.manufacturers || [];
-                      const updated = isSelected
-                        ? current.filter((m) => m !== manufacturer)
-                        : [...current, manufacturer];
-                      setFilter(
-                        "manufacturers",
-                        updated.length > 0 ? updated : undefined
-                      );
-                    }}
-                    className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                  />
-                  <span className="text-sm text-gray-700">{manufacturer}</span>
-                </label>
-              );
-            })}
-          </div>
-        </FilterSection>
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </CollapsibleSection>
 
-        {/* Pump Size */}
-        <FilterSection title="Pump Size (GPM)">
-          <input
-            type="number"
-            placeholder="Minimum GPM"
-            value={filters.pumpSizeMin || ""}
-            onChange={(e) =>
-              setFilter(
-                "pumpSizeMin",
-                e.target.value ? parseInt(e.target.value, 10) : undefined
-              )
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            min={FILTER_RANGES.pumpGPM.min}
-            step={FILTER_RANGES.pumpGPM.step}
-          />
-        </FilterSection>
+          {/* Price Range */}
+          <CollapsibleSection title="Price">
+            <RangeSlider
+              min={FILTER_RANGES.price.min}
+              max={FILTER_RANGES.price.max}
+              step={FILTER_RANGES.price.step}
+              value={[
+                filters.priceMin ?? FILTER_RANGES.price.min,
+                filters.priceMax ?? FILTER_RANGES.price.max,
+              ]}
+              onChange={handlePriceChange}
+              formatValue={formatPrice}
+            />
+          </CollapsibleSection>
 
-        {/* Tank Size */}
-        <FilterSection title="Tank Size (Gallons)">
-          <input
-            type="number"
-            placeholder="Minimum gallons"
-            value={filters.tankSizeMin || ""}
-            onChange={(e) =>
-              setFilter(
-                "tankSizeMin",
-                e.target.value ? parseInt(e.target.value, 10) : undefined
-              )
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            min={FILTER_RANGES.tankGallons.min}
-            step={FILTER_RANGES.tankGallons.step}
-          />
-        </FilterSection>
+          {/* Year Range */}
+          <CollapsibleSection title="Year">
+            <RangeSlider
+              min={FILTER_RANGES.year.min}
+              max={FILTER_RANGES.year.max}
+              step={FILTER_RANGES.year.step}
+              value={[
+                filters.yearMin ?? FILTER_RANGES.year.min,
+                filters.yearMax ?? FILTER_RANGES.year.max,
+              ]}
+              onChange={handleYearChange}
+              formatValue={formatYear}
+            />
+          </CollapsibleSection>
 
-        {/* State */}
-        <FilterSection title="State">
-          <select
-            value={filters.state || ""}
-            onChange={(e) =>
-              setFilter("state", e.target.value || undefined)
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            <option value="">All States</option>
-            {US_STATES.map((state) => (
-              <option key={state.abbreviation} value={state.abbreviation}>
-                {state.name}
-              </option>
-            ))}
-          </select>
-        </FilterSection>
+          {/* Mileage Range */}
+          <CollapsibleSection title="Mileage">
+            <RangeSlider
+              min={FILTER_RANGES.mileage.min}
+              max={FILTER_RANGES.mileage.max}
+              step={FILTER_RANGES.mileage.step}
+              value={[
+                filters.mileageMin ?? FILTER_RANGES.mileage.min,
+                filters.mileageMax ?? FILTER_RANGES.mileage.max,
+              ]}
+              onChange={handleMileageChange}
+              formatValue={formatMileage}
+            />
+          </CollapsibleSection>
+
+          {/* Manufacturers */}
+          <CollapsibleSection title="Manufacturer">
+            <div className="relative">
+              <MultiSelect
+                options={MANUFACTURER_OPTIONS}
+                value={filters.manufacturers || []}
+                onChange={(value) =>
+                  setFilter("manufacturers", value.length > 0 ? value : undefined)
+                }
+                placeholder="Select manufacturers..."
+                searchPlaceholder="Search manufacturers..."
+              />
+            </div>
+          </CollapsibleSection>
+
+          {/* Pump Size */}
+          <CollapsibleSection title="Pump Size (GPM)">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Min: {filters.pumpSizeMin ?? 0} GPM</span>
+              </div>
+              <input
+                type="range"
+                min={FILTER_RANGES.pumpGPM.min}
+                max={FILTER_RANGES.pumpGPM.max}
+                step={FILTER_RANGES.pumpGPM.step}
+                value={filters.pumpSizeMin ?? FILTER_RANGES.pumpGPM.min}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value, 10);
+                  setFilter(
+                    "pumpSizeMin",
+                    value > FILTER_RANGES.pumpGPM.min ? value : undefined
+                  );
+                }}
+                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary-500 [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer"
+              />
+            </div>
+          </CollapsibleSection>
+
+          {/* Tank Size */}
+          <CollapsibleSection title="Tank Size (Gallons)">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Min: {filters.tankSizeMin ?? 0} gal</span>
+              </div>
+              <input
+                type="range"
+                min={FILTER_RANGES.tankGallons.min}
+                max={FILTER_RANGES.tankGallons.max}
+                step={FILTER_RANGES.tankGallons.step}
+                value={filters.tankSizeMin ?? FILTER_RANGES.tankGallons.min}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value, 10);
+                  setFilter(
+                    "tankSizeMin",
+                    value > FILTER_RANGES.tankGallons.min ? value : undefined
+                  );
+                }}
+                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary-500 [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer"
+              />
+            </div>
+          </CollapsibleSection>
+
+          {/* State */}
+          <CollapsibleSection title="State">
+            <Select
+              options={stateOptions}
+              value={filters.state || ""}
+              onChange={(e) => setFilter("state", e.target.value || undefined)}
+            />
+          </CollapsibleSection>
+        </div>
       </div>
+      </div>
+
+      {/* Save Search button - at bottom of filters */}
+      {onSaveSearch && (
+        <button
+          onClick={onSaveSearch}
+          disabled={!hasActiveFilters}
+          className={cn(
+            "w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors",
+            hasActiveFilters
+              ? "bg-primary-500 text-white hover:bg-primary-600"
+              : "bg-gray-200 text-gray-400 cursor-not-allowed"
+          )}
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+            />
+          </svg>
+          Save Search
+        </button>
+      )}
     </div>
   );
 }
 
-function FilterSection({
+function CollapsibleSection({
   title,
   children,
+  defaultOpen = false,
 }: {
   title: string;
   children: React.ReactNode;
+  defaultOpen?: boolean;
 }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
   return (
-    <div>
-      <h3 className="text-sm font-medium text-gray-700 mb-2">{title}</h3>
-      {children}
+    <div className="border-b border-gray-100 last:border-b-0">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between w-full py-3 text-left"
+      >
+        <h3 className="text-sm font-medium text-gray-700">{title}</h3>
+        <svg
+          className={cn(
+            "w-4 h-4 text-gray-400 transition-transform duration-200",
+            isOpen && "rotate-180"
+          )}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      </button>
+      {isOpen && <div className="pb-4">{children}</div>}
     </div>
   );
 }

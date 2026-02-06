@@ -16,6 +16,12 @@ export const MANUFACTURERS: string[] = [
   "International",
 ];
 
+// Manufacturer options for MultiSelect
+export const MANUFACTURER_OPTIONS: SelectOption[] = MANUFACTURERS.map((m) => ({
+  value: m,
+  label: m,
+}));
+
 // Vehicle categories
 export const CATEGORIES: SelectOption[] = [
   { value: "Fire Apparatus", label: "Fire Apparatus" },

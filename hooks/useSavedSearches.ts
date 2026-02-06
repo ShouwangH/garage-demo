@@ -155,6 +155,12 @@ export function useSavedSearches(listings: Listing[] = []) {
     return { active, paused, total };
   }, [savedSearches]);
 
+  // Refresh saved searches from storage (for reset)
+  const refreshSavedSearches = useCallback(() => {
+    const stored = getSavedSearches();
+    setSavedSearches(stored);
+  }, []);
+
   return {
     savedSearches: savedSearchesWithCounts,
     isLoading,
@@ -165,5 +171,6 @@ export function useSavedSearches(listings: Listing[] = []) {
     getSavedSearchById,
     findSimilarSearch,
     counts,
+    refreshSavedSearches,
   };
 }

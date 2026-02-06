@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, Suspense } from "react";
+import { useState, useCallback, Suspense, useMemo } from "react";
 import Link from "next/link";
 import { useListings } from "@/hooks/useListings";
 import { useSavedSearches } from "@/hooks/useSavedSearches";
@@ -10,11 +10,12 @@ import { SaveSearchModal } from "@/components/SaveSearchModal";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { EmailPreviewModal } from "@/components/EmailPreviewModal";
 import { Button } from "@/components/ui";
+import { generateMatchingListing } from "@/lib/mockData";
 import { getMatchingListings } from "@/lib/matching";
 import type { SavedSearch, SavedSearchInput } from "@/lib/types";
 
 function SavedSearchesContent() {
-  const { listings, simulateNewListing } = useListings();
+  const { listings, addListing, resetToInitial } = useListings();
   const {
     savedSearches,
     isLoading,
@@ -22,6 +23,7 @@ function SavedSearchesContent() {
     updateSavedSearch,
     deleteSavedSearch,
     counts,
+    refreshSavedSearches,
   } = useSavedSearches(listings);
   const { addToast } = useToast();
 
@@ -51,8 +53,8 @@ function SavedSearchesContent() {
 
   // Handle save edit
   const handleSaveEdit = useCallback(
-    (input: SavedSearchInput) => {
-      if (!editingSearch) return;
+    (input: SavedSearchInput): boolean => {
+      if (!editingSearch) return false;
 
       updateSavedSearch(editingSearch.id, {
         name: input.name,
@@ -61,8 +63,22 @@ function SavedSearchesContent() {
       });
       addToast(`Search "${input.name}" updated successfully!`, "success");
       setEditingSearch(null);
+      return true;
     },
     [editingSearch, updateSavedSearch, addToast]
+  );
+
+  // Memoize to prevent useEffect reset on parent re-render
+  const editModalProps = useMemo(
+    () =>
+      editingSearch
+        ? {
+            name: editingSearch.name,
+            email: editingSearch.email,
+            frequency: editingSearch.frequency,
+          }
+        : undefined,
+    [editingSearch]
   );
 
   // Handle delete click
@@ -93,31 +109,25 @@ function SavedSearchesContent() {
     []
   );
 
-  // Handle simulate new listing
-  const handleSimulateNewListing = useCallback(() => {
-    const newListing = simulateNewListing();
-    if (newListing) {
-      // Find which saved searches match this new listing
-      const matchingSearches = savedSearches.filter((search) => {
-        const matches = getMatchingListings([newListing], search.filters);
-        return matches.length > 0;
-      });
+  // Handle simulate match for a specific search
+  const handleSimulateMatch = useCallback(
+    (search: SavedSearch & { matchCount: number }) => {
+      const newListing = generateMatchingListing(search.filters);
+      addListing(newListing);
+      addToast(
+        `New listing "${newListing.title}" added! Matches "${search.name}"`,
+        "success"
+      );
+    },
+    [addListing, addToast]
+  );
 
-      if (matchingSearches.length > 0) {
-        const searchNames = matchingSearches
-          .map((s) => `"${s.name}"`)
-          .join(", ");
-        addToast(
-          `New listing added! Matches ${matchingSearches.length} saved ${
-            matchingSearches.length === 1 ? "search" : "searches"
-          }: ${searchNames}`,
-          "success"
-        );
-      } else {
-        addToast("New listing added!", "success");
-      }
-    }
-  }, [simulateNewListing, savedSearches, addToast]);
+  // Handle reset demo data
+  const handleResetDemo = useCallback(() => {
+    resetToInitial();
+    refreshSavedSearches();
+    addToast("Demo reset to initial state", "info");
+  }, [resetToInitial, refreshSavedSearches, addToast]);
 
   if (isLoading) {
     return <SavedSearchesSkeleton />;
@@ -144,8 +154,7 @@ function SavedSearchesContent() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Simulate button - for demo purposes */}
-          <Button variant="secondary" onClick={handleSimulateNewListing}>
+          <Button variant="secondary" onClick={handleResetDemo}>
             <svg
               className="w-4 h-4 mr-2"
               fill="none"
@@ -156,12 +165,11 @@ function SavedSearchesContent() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M13 10V3L4 14h7v7l9-11h-7z"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
-            Simulate Listing
+            Reset Demo
           </Button>
-
           <Link href="/">
             <Button variant="primary">Create New Search</Button>
           </Link>
@@ -179,6 +187,7 @@ function SavedSearchesContent() {
               onEdit={handleEdit}
               onDelete={handleDeleteClick}
               onPreviewEmail={handlePreviewEmail}
+              onSimulateMatch={handleSimulateMatch}
             />
           ))}
         </div>
@@ -193,11 +202,7 @@ function SavedSearchesContent() {
           onClose={() => setEditingSearch(null)}
           onSave={handleSaveEdit}
           filters={editingSearch.filters}
-          existingSearch={{
-            name: editingSearch.name,
-            email: editingSearch.email,
-            frequency: editingSearch.frequency,
-          }}
+          existingSearch={editModalProps}
         />
       )}
 

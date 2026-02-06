@@ -12,6 +12,7 @@ interface SavedSearchCardProps {
   onDelete?: (id: string) => void;
   onEdit?: (search: SavedSearch & { matchCount: number }) => void;
   onPreviewEmail?: (search: SavedSearch & { matchCount: number }) => void;
+  onSimulateMatch?: (search: SavedSearch & { matchCount: number }) => void;
 }
 
 export function SavedSearchCard({
@@ -20,6 +21,7 @@ export function SavedSearchCard({
   onDelete,
   onEdit,
   onPreviewEmail,
+  onSimulateMatch,
 }: SavedSearchCardProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -73,11 +75,6 @@ export function SavedSearchCard({
   const handleDelete = () => {
     setIsMenuOpen(false);
     onDelete?.(search.id);
-  };
-
-  const handlePreviewEmail = () => {
-    setIsMenuOpen(false);
-    onPreviewEmail?.(search);
   };
 
   return (
@@ -169,6 +166,53 @@ export function SavedSearchCard({
 
         {/* Right side - Actions */}
         <div className="flex items-center gap-2 shrink-0">
+          {/* Demo buttons - outside normal flow */}
+          {onSimulateMatch && (
+            <button
+              onClick={() => onSimulateMatch(search)}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
+              </svg>
+              <span className="hidden sm:inline">Simulate Match</span>
+              <span className="sm:hidden">Simulate</span>
+            </button>
+          )}
+
+          {onPreviewEmail && (
+            <button
+              onClick={() => onPreviewEmail(search)}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-green-500 hover:bg-green-600 rounded-lg transition-colors"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+              <span className="hidden sm:inline">Preview Email</span>
+              <span className="sm:hidden">Email</span>
+            </button>
+          )}
+
           {/* View matches link */}
           <Link
             href={buildFilterUrl(search.filters)}
@@ -192,8 +236,8 @@ export function SavedSearchCard({
             </button>
           )}
 
-          {/* More actions dropdown */}
-          {(onEdit || onDelete || onPreviewEmail) && (
+          {/* More actions dropdown - normal actions */}
+          {(onEdit || onDelete) && (
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -224,27 +268,6 @@ export function SavedSearchCard({
               {/* Dropdown menu */}
               {isMenuOpen && (
                 <div className="absolute right-0 mt-1 w-36 bg-white rounded-lg border border-gray-200 shadow-lg py-1 z-10">
-                  {onPreviewEmail && (
-                    <button
-                      onClick={handlePreviewEmail}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                        />
-                      </svg>
-                      Preview Email
-                    </button>
-                  )}
                   {onEdit && (
                     <button
                       onClick={handleEdit}

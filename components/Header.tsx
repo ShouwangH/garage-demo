@@ -17,14 +17,14 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <span className="text-2xl font-bold text-primary-500">Garage</span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-1">
+          {/* Desktop Navigation - Centered */}
+          <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -41,21 +41,9 @@ export function Header() {
             ))}
           </nav>
 
-          {/* User Menu (Mock) */}
-          <div className="hidden md:flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
-                <span className="text-sm font-medium text-primary-600">CJ</span>
-              </div>
-              <span className="text-sm font-medium text-gray-700">
-                Chief Johnson
-              </span>
-            </div>
-          </div>
-
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100"
+            className="md:hidden ml-auto p-2 rounded-lg text-gray-600 hover:bg-gray-100"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
             aria-expanded={mobileMenuOpen}
@@ -112,16 +100,6 @@ export function Header() {
                 </Link>
               ))}
             </nav>
-            <div className="mt-4 pt-4 border-t border-gray-100 px-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
-                  <span className="text-sm font-medium text-primary-600">CJ</span>
-                </div>
-                <span className="text-sm font-medium text-gray-700">
-                  Chief Johnson
-                </span>
-              </div>
-            </div>
           </div>
         )}
       </div>

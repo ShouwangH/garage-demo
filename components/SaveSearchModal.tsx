@@ -10,13 +10,15 @@ import type { SearchFilters, NotificationFrequency, SavedSearchInput } from "@/l
 interface SaveSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (input: SavedSearchInput) => void;
+  onSave: (input: SavedSearchInput) => boolean;
   filters: SearchFilters;
   existingSearch?: {
     name: string;
     email: string;
     frequency: NotificationFrequency;
   };
+  defaultName?: string;
+  defaultEmail?: string;
 }
 
 interface FormErrors {
@@ -30,6 +32,8 @@ export function SaveSearchModal({
   onSave,
   filters,
   existingSearch,
+  defaultName = "",
+  defaultEmail = "",
 }: SaveSearchModalProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -45,14 +49,14 @@ export function SaveSearchModal({
         setEmail(existingSearch.email);
         setFrequency(existingSearch.frequency);
       } else {
-        setName("");
-        setEmail("");
+        setName(defaultName);
+        setEmail(defaultEmail);
         setFrequency("instant");
       }
       setErrors({});
       setIsSubmitting(false);
     }
-  }, [isOpen, existingSearch]);
+  }, [isOpen, existingSearch, defaultName, defaultEmail]);
 
   const validateForm = useCallback((): boolean => {
     const newErrors: FormErrors = {};
@@ -94,8 +98,12 @@ export function SaveSearchModal({
         filters,
       };
 
-      onSave(input);
-      onClose();
+      const success = onSave(input);
+      if (success) {
+        onClose();
+      } else {
+        setIsSubmitting(false);
+      }
     },
     [name, email, frequency, filters, validateForm, onSave, onClose]
   );

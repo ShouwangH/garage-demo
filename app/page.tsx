@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, Suspense } from "react";
+import { useRouter } from "next/navigation";
 import { useListings } from "@/hooks/useListings";
 import { useFilters } from "@/hooks/useFilters";
 import { useSavedSearches } from "@/hooks/useSavedSearches";
@@ -10,9 +11,11 @@ import { FilterSidebar } from "@/components/FilterSidebar";
 import { FilterDrawer } from "@/components/FilterDrawer";
 import { SaveSearchModal } from "@/components/SaveSearchModal";
 import { getMatchingListings, sortListings } from "@/lib/matching";
+import { DEMO_FILTER_PRESET } from "@/lib/mockData";
 import type { SortOption, SavedSearchInput } from "@/lib/types";
 
 function BrowseContent() {
+  const router = useRouter();
   const { listings, isLoading } = useListings();
   const { filters, hasActiveFilters, activeFilterCount } = useFilters();
   const { createSavedSearch, findSimilarSearch } = useSavedSearches(listings);
@@ -21,22 +24,39 @@ function BrowseContent() {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
 
+  // Load demo filters for clickthrough experience
+  const handleLoadDemoFilters = useCallback(() => {
+    const demoParams = new URLSearchParams();
+    if (DEMO_FILTER_PRESET.filters.category) {
+      demoParams.set("category", DEMO_FILTER_PRESET.filters.category);
+    }
+    if (DEMO_FILTER_PRESET.filters.manufacturers) {
+      demoParams.set("manufacturers", DEMO_FILTER_PRESET.filters.manufacturers.join(","));
+    }
+    if (DEMO_FILTER_PRESET.filters.priceMax) {
+      demoParams.set("priceMax", String(DEMO_FILTER_PRESET.filters.priceMax));
+    }
+    router.push(`/?${demoParams.toString()}`);
+    addToast("Demo filters loaded", "info");
+  }, [router, addToast]);
+
   // Apply filters then sort
   const filteredListings = getMatchingListings(listings, filters);
   const sortedListings = sortListings(filteredListings, sortBy);
 
   // Handle saving a search
   const handleSaveSearch = useCallback(
-    (input: SavedSearchInput) => {
+    (input: SavedSearchInput): boolean => {
       // Check for duplicate filters
       const existing = findSimilarSearch(input.filters);
       if (existing) {
         addToast(`A similar search "${existing.name}" already exists`, "info");
-        return;
+        return false;
       }
 
       createSavedSearch(input);
       addToast(`Search "${input.name}" saved successfully!`, "success");
+      return true;
     },
     [createSavedSearch, findSimilarSearch, addToast]
   );
@@ -47,7 +67,10 @@ function BrowseContent() {
         {/* Filter sidebar - hidden on mobile */}
         <aside className="hidden md:block w-64 lg:w-72 shrink-0">
           <div className="sticky top-24">
-            <FilterSidebar />
+            <FilterSidebar
+              onLoadDemoFilters={handleLoadDemoFilters}
+              onSaveSearch={() => setIsSaveModalOpen(true)}
+            />
           </div>
         </aside>
 
@@ -95,29 +118,6 @@ function BrowseContent() {
                 )}
               </button>
 
-              {/* Save Search button - only show when filters are active */}
-              {hasActiveFilters && (
-                <button
-                  onClick={() => setIsSaveModalOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-colors"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                    />
-                  </svg>
-                  <span className="hidden sm:inline">Save Search</span>
-                </button>
-              )}
-
               {/* Sort dropdown */}
               <select
                 value={sortBy}
@@ -141,6 +141,8 @@ function BrowseContent() {
       <FilterDrawer
         isOpen={isFilterDrawerOpen}
         onClose={() => setIsFilterDrawerOpen(false)}
+        onLoadDemoFilters={handleLoadDemoFilters}
+        onSaveSearch={() => setIsSaveModalOpen(true)}
       />
 
       {/* Save search modal */}
@@ -149,6 +151,8 @@ function BrowseContent() {
         onClose={() => setIsSaveModalOpen(false)}
         onSave={handleSaveSearch}
         filters={filters}
+        defaultName={DEMO_FILTER_PRESET.suggestedName}
+        defaultEmail={DEMO_FILTER_PRESET.suggestedEmail}
       />
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { Listing } from "@/lib/types";
-import { getListings, saveListings, initializeStorage } from "@/lib/storage";
+import { getListings, saveListings, initializeStorage, resetStorage } from "@/lib/storage";
 import { SIMULATABLE_LISTINGS } from "@/lib/mockData";
 
 export function useListings() {
@@ -54,11 +54,20 @@ export function useListings() {
     });
   }, []);
 
+  // Reset all data to initial state (for demo)
+  const resetToInitial = useCallback(() => {
+    resetStorage();
+    const storedListings = getListings();
+    setListings(storedListings);
+    setSimulatedIndex(0);
+  }, []);
+
   return {
     listings,
     isLoading,
     addListing,
     removeListing,
     simulateNewListing,
+    resetToInitial,
   };
 }
